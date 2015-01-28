@@ -3,7 +3,8 @@
 
 module Control.Monad.Tune  (
   Tune, TuneT,
-  makeChoice,
+  fixChoice,
+  getChoice,
   setEval,
   runTuneT,
   runTune,
@@ -23,44 +24,49 @@ import Control.Monad.State
 import Control.Monad.Identity
 import Control.Applicative
 
+type Name = String
 type Decision = Int
 type Score = Int
 type Domain = Set Decision
                      
 data TunerChoice = TunerChoice {
-  name :: String ,
+  name :: Name ,
   domain :: Domain ,
   parent :: Maybe TunerChoice
   } deriving (Show)
 
-type TunerChoiceMap = Map String TunerChoice
+type TunerChoiceMap = Map Name TunerChoice
 
 data TunerState = TunerState { 
-  choices :: Set (String, Decision) ,
+  choices :: [(Name, Decision)] ,
   evaluation :: Maybe Score ,
   env :: TunerChoiceMap ,
   rnd :: StdGen
   } deriving (Show)
 
 class (Monad m) => MonadTune m where
-  makeChoice :: m a
+  fixChoice :: Name -> m a
   setEval :: Score -> m a
-  
+
 newtype TuneT m a = TuneT (StateT TunerState m a)
                   deriving (Functor, Applicative, Monad, MonadTrans, MonadIO)
- 
+
+   
+newtype Tune a = Tune (TuneT Identity a)
+               deriving (Functor, Applicative, Monad, MonadTune)
+
+instance (Monad m) => MonadTune (TuneT m) where
+  fixChoice n = TuneT $ liftState (choose n)
+  setEval s = TuneT $ liftState (saveScore s)
+
+getChoice n = do a <- fixChoice n
+                 return head $ choices a
+
 liftState :: (MonadState s m) => (s -> (a,s)) -> m a
 liftState t = do v <- get
                  let (x, v') = t v
                  put v'
                  return x
-
-newtype Tune a = Tune (TuneT Identity a)
-               deriving (Functor, Applicative, Monad, MonadTune)
-
-instance (Monad m) => MonadTune (TuneT m) where
-  makeChoice = TuneT $ liftState choose
-  setEval s = TuneT $ liftState (saveScore s)
 
 runTuneT :: (Monad m) => TuneT m a -> TunerState -> m (a, TunerState)
 runTuneT (TuneT x) s = runStateT x s 
@@ -82,7 +88,7 @@ addChoiceDepends m name domain parent =
   (TunerChoice name domain $ Just parent) m 
 
 makeTunerState :: TunerChoiceMap -> StdGen -> TunerState
-makeTunerState m r = TunerState S.empty Nothing m r
+makeTunerState m r = TunerState [] Nothing m r
 
 choose = undefined
 saveScore = undefined
