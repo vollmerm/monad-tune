@@ -26,8 +26,8 @@ module Control.Monad.Tune  (
   makeTunerState,
 
   -- * Data structures and type aliases for using TunerT.
-  TunerState, TunerChoiceMap,
-  Score, Decision, Domain
+  TunerState(..), TunerChoice(..),
+  Name, Score, Decision, Domain
   ) where
 
 import Data.Map (Map)
