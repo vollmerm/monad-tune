@@ -34,7 +34,7 @@ mutateVal c s (k,v) = do
   chance <- coinFlip c
   let d = getDomain k s
   r <- getRandomR (0, length d - 1)
-  if (chance && hasDependent k s) then return (k, d !! r) else return (k,v)
+  if chance && hasDependent k s then return (k, d !! r) else return (k,v)
 
 coinFlip :: (MonadRandom m, Random a, Ord a, Fractional a) => a -> m Bool
 coinFlip c = do

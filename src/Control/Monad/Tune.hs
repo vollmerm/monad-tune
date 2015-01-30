@@ -95,10 +95,10 @@ liftState t = do v <- get
                  return x
 
 runTuneT :: (Monad m) => TuneT m a -> TunerState -> m (a, TunerState)
-runTuneT (TuneT x) s = runStateT x s
+runTuneT (TuneT x)= runStateT x
 
 runTune :: Tune a -> TunerState -> (a, TunerState)
-runTune (Tune x) s = runIdentity (runTuneT x s)
+runTune (Tune x) = runIdentity . runTuneT x
 
 addChoiceRoot :: TunerChoiceMap
                  -> String -> Domain -> TunerChoiceMap
@@ -114,7 +114,7 @@ addChoiceDepends m name domain parent =
   (TunerChoice name domain $ Just parent) m
 
 makeTunerState :: TunerChoiceMap -> StdGen -> TunerState
-makeTunerState m r = TunerState M.empty Nothing m r
+makeTunerState = TunerState M.empty Nothing
 
 -- | This is extremely inefficient! Ideally we shouldn't have to
 -- walk the domain to pick an element out of it. This should be
@@ -124,7 +124,7 @@ randElem s g = (s !! n, g')
     where (n, g') = randomR (0, length s - 1) g
 
 choose n s =
-  case (M.lookup n $ choices s) of
+  case M.lookup n $ choices s of
     -- Two cases:
     --   * n is in state: Either we already made this choice, or
     --     it was put in the state before the start by a search strategy.
