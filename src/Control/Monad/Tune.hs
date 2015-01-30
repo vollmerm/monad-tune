@@ -1,5 +1,7 @@
-{-#LANGUAGE MultiParamTypeClasses, UndecidableInstances #-} 
-{-#LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 {- |
 Copyright    : 2015 Mike Vollmer
@@ -18,7 +20,7 @@ module Control.Monad.Tune  (
   -- * Computation inside the monad uses makeChoice and setEval.
   makeChoice,
   setEval,
-  
+
   runTuneT,
   runTune,
   addChoiceRoot,
@@ -30,12 +32,12 @@ module Control.Monad.Tune  (
   Name, Score, Decision, Domain
   ) where
 
-import Data.Map (Map)
-import qualified Data.Map as M
-import System.Random
-import Control.Monad.State
-import Control.Monad.Identity
-import Control.Applicative
+import           Control.Applicative
+import           Control.Monad.Identity
+import           Control.Monad.State
+import           Data.Map               (Map)
+import qualified Data.Map               as M
+import           System.Random
 
 -- | These are some aliases I made to keep the types straight.
 -- For this to be properly general they probably should be type parameters
@@ -48,7 +50,7 @@ type Domain = [Decision]
 
 -- | A particular potential choice has a name, a domain, and possibly a parent.
 data TunerChoice = TunerChoice {
-  name :: Name ,
+  name   :: Name ,
   domain :: Domain ,
   parent :: Maybe TunerChoice -- ^ Might depend on another choice
   } deriving (Show)
@@ -58,11 +60,11 @@ type TunerChoiceMap = Map Name TunerChoice
 -- | The search state has a map of all choices made so far, a final evaluation,
 -- an environment of all possible choices, and the current random number
 -- generator.
-data TunerState = TunerState { 
-  choices :: Map Name Decision ,
+data TunerState = TunerState {
+  choices    :: Map Name Decision ,
   evaluation :: Maybe Score ,
-  env :: TunerChoiceMap ,
-  rnd :: StdGen
+  env        :: TunerChoiceMap ,
+  rnd        :: StdGen
   } deriving (Show)
 
 -- | Two functions are defined in the MonadTune typeclass. One grabs a
@@ -93,7 +95,7 @@ liftState t = do v <- get
                  return x
 
 runTuneT :: (Monad m) => TuneT m a -> TunerState -> m (a, TunerState)
-runTuneT (TuneT x) s = runStateT x s 
+runTuneT (TuneT x) s = runStateT x s
 
 runTune :: Tune a -> TunerState -> (a, TunerState)
 runTune (Tune x) s = runIdentity (runTuneT x s)
@@ -109,7 +111,7 @@ addChoiceDepends :: TunerChoiceMap
                     -> TunerChoiceMap
 addChoiceDepends m name domain parent =
   M.insert name
-  (TunerChoice name domain $ Just parent) m 
+  (TunerChoice name domain $ Just parent) m
 
 makeTunerState :: TunerChoiceMap -> StdGen -> TunerState
 makeTunerState m r = TunerState M.empty Nothing m r

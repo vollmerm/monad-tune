@@ -11,10 +11,10 @@ module Control.Monad.Tune.Search (
   mutate
   ) where
 
-import Control.Monad.Random
-import Control.Monad.Tune
-import Control.Monad 
-import qualified Data.Map as M
+import           Control.Monad
+import           Control.Monad.Random
+import           Control.Monad.Tune
+import qualified Data.Map             as M
 
 crossover :: (MonadRandom m) => TunerState -> TunerState -> m TunerState
 crossover s1 s2 = undefined
@@ -35,12 +35,12 @@ mutateVal c s (k,v) = do
   let d = getDomain k s
   r <- getRandomR (0, length d - 1)
   if (chance && hasDependent k s) then return (k, d !! r) else return (k,v)
-        
+
 coinFlip :: (MonadRandom m, Random a, Ord a, Fractional a) => a -> m Bool
 coinFlip c = do
   c' <- getRandomR (0.0, 1.0)
   return $ c < c'
-  
+
 hasChoice :: Name -> TunerState -> Bool
 hasChoice n s = M.member n $ choices s
 
