@@ -95,7 +95,7 @@ liftState t = do v <- get
                  return x
 
 runTuneT :: (Monad m) => TuneT m a -> TunerState -> m (a, TunerState)
-runTuneT (TuneT x)= runStateT x
+runTuneT (TuneT x) = runStateT x
 
 runTune :: Tune a -> TunerState -> (a, TunerState)
 runTune (Tune x) = runIdentity . runTuneT x

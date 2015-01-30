@@ -25,7 +25,7 @@ mutate c s = do
   let ls = M.assocs $ choices s
   ls' <- mapM (mutateVal c s) ls
   let choices' = M.fromList ls'
-  return $ s { choices = choices' }
+  return $ s { choices = choices', evaluation = Nothing }
 
 mutateVal
   :: (MonadRandom m, Random a, Ord a, Fractional a) =>
