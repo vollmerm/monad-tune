@@ -23,35 +23,61 @@ mutate :: (MonadRandom m, Ord a, Fractional a, Random a) =>
           a -> TunerState -> m TunerState
 mutate c s = do
   let ls = M.assocs $ choices s
-  ls' <- mapM (mutateVal c s) ls
-  let choices' = M.fromList ls'
-  return $ s { choices = choices', evaluation = Nothing }
+  ls1 <- mapM (mutateVal c s) ls
+  s   <- foldM fixDeps s ls1
+  ls2 <- mapM (\(k,v,_) -> return (k,v)) ls1
+  return $ s { choices = M.fromList ls2, evaluation = Nothing }
+  where mutateVal c s (k,v) = 
+          -- current limitation/hack:
+          -- if not a root, don't mutate
+          let choice = getChoice s k
+          in if hasParent choice
+             then return (k,v,False)
+             else do 
+               chance <- coinFlip c
+               let d = getDomain s k
+               r <- getRandomR (0, length d - 1)
+               if chance
+                 then return (k, d !! r, True)
+                 else return (k, v, False)
+        fixDeps s (_,_,False) = return s
+        fixDeps s (k,v,True)  =
+          let choice = getChoice s k
+          in return $ remDepends s k
 
-mutateVal
-  :: (MonadRandom m, Random a, Ord a, Fractional a) =>
-     a -> TunerState -> (Name, Decision) -> m (Name, Decision)
-mutateVal c s (k,v) = do
-  chance <- coinFlip c
-  let d = getDomain k s
-  r <- getRandomR (0, length d - 1)
-  if chance && hasDependent k s then return (k, d !! r) else return (k,v)
+
+-------------------------------------------------------------------------------
+-- Helper functions
+
+remName :: TunerState -> Name -> TunerState
+remName s n = s { choices = choices', env = env' }
+  where env' = M.delete n $ env s
+        choices' = M.delete n $ choices s
+
+remDepends :: TunerState -> Name -> TunerState
+remDepends s n = case parent $ getChoice s n of
+  Nothing -> s
+  Just p  -> let n' = name p
+                 s' = remDepends s n'
+             in remName s n'
 
 coinFlip :: (MonadRandom m, Random a, Ord a, Fractional a) => a -> m Bool
 coinFlip c = do
   c' <- getRandomR (0.0, 1.0)
   return $ c < c'
 
-hasChoice :: Name -> TunerState -> Bool
-hasChoice n s = M.member n $ choices s
+hasChoice :: TunerState -> Name -> Bool
+hasChoice s n = M.member n $ choices s
 
-hasDependent :: Name -> TunerState -> Bool
-hasDependent n s = case M.lookup n $ env s of
-  Nothing -> error "Choice not found in env!"
-  Just c -> case parent c of
-    Nothing -> True
-    Just p -> hasChoice (name p) s
+hasParent :: TunerChoice -> Bool
+hasParent c = case parent c of
+  Nothing -> False
+  Just _  -> True
 
-getDomain :: Name -> TunerState -> Domain
-getDomain n s = case M.lookup n $ env s of
-  Nothing -> error "Domain cannot be found!"
-  Just c -> domain c
+getDomain :: TunerState -> Name -> Domain
+getDomain s n = domain $ getChoice s n
+
+getChoice :: TunerState -> Name -> TunerChoice
+getChoice s n = case M.lookup n $ env s of
+  Nothing -> error "Choice cannot be found!"
+  Just c  -> c
