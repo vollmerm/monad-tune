@@ -43,41 +43,9 @@ mutate c s = do
         fixDeps s (_,_,False) = return s
         fixDeps s (k,v,True)  =
           let choice = getChoice s k
-          in return $ remDepends s k
-
-
--------------------------------------------------------------------------------
--- Helper functions
-
-remName :: TunerState -> Name -> TunerState
-remName s n = s { choices = choices', env = env' }
-  where env' = M.delete n $ env s
-        choices' = M.delete n $ choices s
-
-remDepends :: TunerState -> Name -> TunerState
-remDepends s n = case parent $ getChoice s n of
-  Nothing -> s
-  Just p  -> let n' = name p
-                 s' = remDepends s n'
-             in remName s n'
+          in return $ remDependents s k
 
 coinFlip :: (MonadRandom m, Random a, Ord a, Fractional a) => a -> m Bool
 coinFlip c = do
   c' <- getRandomR (0.0, 1.0)
   return $ c < c'
-
-hasChoice :: TunerState -> Name -> Bool
-hasChoice s n = M.member n $ choices s
-
-hasParent :: TunerChoice -> Bool
-hasParent c = case parent c of
-  Nothing -> False
-  Just _  -> True
-
-getDomain :: TunerState -> Name -> Domain
-getDomain s n = domain $ getChoice s n
-
-getChoice :: TunerState -> Name -> TunerChoice
-getChoice s n = case M.lookup n $ env s of
-  Nothing -> error "Choice cannot be found!"
-  Just c  -> c
